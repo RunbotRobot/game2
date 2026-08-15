@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>LEXIQUEST — A Word-Learning Adventure</title>
+<style>
+  :root{
+    --bg-deep:#181225;
+    --bg-panel:#241a35;
+    --bg-panel-2:#2e2145;
+    --border-gold:#d8a84b;
+    --border-gold-dim:#8a6a30;
+    --text-main:#f1e9da;
+    --text-dim:#c3b6d6;
+    --accent-blue:#5aa9e6;
+    --accent-red:#e0616b;
+    --accent-green:#6fbf73;
+    --accent-purple:#a883e6;
+    --accent-good:#7fd18a;
+    --accent-bad:#e0616b;
+    --shadow-hard: 0 0 0 2px #000, 0 4px 0 0 #000;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background:
+      radial-gradient(circle at 20% 10%, #3a2a58 0%, transparent 45%),
+      radial-gradient(circle at 85% 80%, #2a4a58 0%, transparent 50%),
+      var(--bg-deep);
+    color:var(--text-main);
+    font-family: Georgia, 'Times New Roman', serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{
+    max-width:640px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+  .hidden{ display:none !important; }
+
+  /* ---------- Top bar ---------- */
+  #topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:8px 10px;
+    background:var(--bg-panel-2);
+    border-bottom:3px solid var(--border-gold-dim);
+    font-size:13px;
+    flex-wrap:wrap;
+  }
+  #topbar .hero-chip{
+    display:flex; align-items:center; gap:6px;
+    background:rgba(0,0,0,0.25);
+    padding:4px 8px; border-radius:20px;
+    border:1px solid var(--border-gold-dim);
+  }
+  #topbar .stat{ display:flex; align-items:center; gap:3px; white-space:nowrap;}
+  #topbar .avatar-badge{ font-size:18px; }
+  #hpbar-wrap, #xpbar-wrap{
+    width:60px; height:8px; background:#000; border-radius:4px; overflow:hidden;
+    border:1px solid #000;
+    display:inline-block; vertical-align:middle;
+  }
+  #hpbar-fill{ height:100%; background:linear-gradient(90deg,#e0616b,#f08a8a); width:100%; }
+  #xpbar-fill{ height:100%; background:linear-gradient(90deg,#5aa9e6,#8ad0f0); width:0%; }
+  #nav{ display:flex; gap:6px; }
+  #nav button{
+    background:var(--bg-panel); color:var(--text-main);
+    border:2px solid var(--border-gold-dim);
+    border-radius:8px; padding:5px 9px; font-size:12px; cursor:pointer;
+    font-family:inherit;
+  }
+  #nav button.active{ border-color:var(--border-gold); background:var(--bg-panel-2); }
+
+  /* ---------- Generic screen/panel ---------- */
+  .screen{
+    flex:1; display:flex; flex-direction:column;
+    padding:16px 14px 28px;
+    animation: fadein .25s ease;
+  }
+  @keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
+  .panel{
+    background:var(--bg-panel);
+    border:2px solid var(--border-gold-dim);
+    border-radius:12px;
+    padding:14px 16px;
+    margin-bottom:14px;
+    box-shadow: inset 0 0 0 1px rgba(216,168,75,0.08);
+  }
+  h1,h2,h3{ margin:0 0 8px; font-weight:normal; }
+  h1{ font-size:26px; letter-spacing:2px; color:var(--border-gold); text-shadow:0 2px 0 #000;}
+  h2{ font-size:19px; color:var(--border-gold);}
+  h3{ font-size:15px; color:var(--text-dim); }
+  p{ line-height:1.5; margin:0 0 10px; }
+
+  button.btn{
+    font-family:inherit;
+    background: linear-gradient(180deg, #3a2a58, #2a1f42);
+    color:var(--text-main);
+    border:2px solid var(--border-gold);
+    border-radius:10px;
+    padding:11px 16px;
+    font-size:15px;
+    cursor:pointer;
+    box-shadow: 0 3px 0 var(--border-gold-dim);
+    transition: transform .05s;
+  }
+  button.btn:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--border-gold-dim); }
+  button.btn:disabled{ opacity:.4; cursor:not-allowed; }
+  button.btn.secondary{ border-color:var(--border-gold-dim); box-shadow:0 3px 0 #1a1428; font-size:13px; padding:8px 12px;}
+  button.btn.wide{ width:100%; margin-bottom:8px; }
+  button.btn.danger{ border-color:var(--accent-red); box-shadow:0 3px 0 #7a1f26; }
+
+  .row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .center{ text-align:center; }
+  .muted{ color:var(--text-dim); font-size:13px; }
+
+  /* ---------- Title screen ---------- */
+  #screen-title{ align-items:center; justify-content:center; text-align:center; gap:6px; }
+  #screen-title h1{ font-size:40px; margin-bottom:0; }
+  #screen-title .subtitle{ color:var(--accent-purple); margin-bottom:22px; font-style:italic;}
+  .title-emoji{ font-size:54px; margin-bottom:10px; filter:drop-shadow(0 4px 0 #000); }
+
+  /* ---------- Avatar picker ---------- */
+  .avatar-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:10px 0; }
+  .avatar-opt{
+    background:var(--bg-panel-2); border:2px solid var(--border-gold-dim); border-radius:10px;
+    padding:12px 4px; text-align:center; cursor:pointer; font-size:30px;
+  }
+  .avatar-opt.selected{ border-color:var(--border-gold); background:#3a2a58; }
+  .avatar-opt .name{ font-size:11px; margin-top:4px; color:var(--text-dim); }
+
+  input[type=text]{
+    font-family:inherit; font-size:16px; padding:10px; border-radius:8px;
+    border:2px solid var(--border-gold-dim); background:#100b1a; color:var(--text-main);
+    width:100%; margin-bottom:10px;
+  }
+  input[type=text]:focus{ outline:none; border-color:var(--border-gold); }
+
+  /* ---------- Map ---------- */
+  .zone-card{
+    display:flex; align-items:center; gap:12px;
+  }
+  .zone-icon{ font-size:38px; }
+  .zone-card .info{ flex:1; }
+  .locked-zone{ opacity:.5; }
+
+  /* ---------- Word spirit ---------- */
+  .spirit-stage{
+    display:flex; flex-direction:column; align-items:center; padding:10px 0 4px;
+  }
+  .blob{
+    width:110px; height:100px; border-radius:50% 50% 46% 46% / 60% 60% 40% 40%;
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    position:relative; margin-bottom:10px;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.4), inset 0 -8px 14px rgba(0,0,0,0.25);
+    animation: bob 2.2s ease-in-out infinite;
+  }
+  @keyframes bob{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-6px);} }
+  .blob .eyes{ display:flex; gap:14px; }
+  .blob .eye{ width:10px; height:12px; background:#1a1428; border-radius:50%; }
+  .blob.hit{ animation: shake .3s; }
+  @keyframes shake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-8px);} 75%{transform:translateX(8px);} }
+  .pos-n{ background:linear-gradient(160deg,#5aa9e6,#3a7ab8); }
+  .pos-v{ background:linear-gradient(160deg,#e0616b,#b8404a); }
+  .pos-adj{ background:linear-gradient(160deg,#6fbf73,#4a9a4e); }
+  .pos-adv{ background:linear-gradient(160deg,#a883e6,#7a5cc0); }
+
+  .pos-badge{
+    display:inline-block; font-size:11px; padding:2px 8px; border-radius:12px;
+    background:rgba(0,0,0,0.35); border:1px solid var(--border-gold-dim); margin-bottom:6px;
+  }
+  .spirit-hp{ display:flex; gap:4px; margin-top:2px; }
+  .spirit-hp .pip{ width:16px; height:16px; border-radius:50%; background:#e0616b; border:1px solid #000; }
+  .spirit-hp .pip.empty{ background:#3a2a3a; }
+
+  .word-display{
+    font-size:30px; letter-spacing:4px; text-align:center; margin:6px 0 12px;
+    color:var(--border-gold); text-shadow:0 2px 0 #000;
+  }
+  .word-display.scrambled{ color:var(--text-main); }
+
+  .choice-list{ display:flex; flex-direction:column; gap:8px; }
+  .choice-btn{
+    text-align:left; font-family:inherit; font-size:14px;
+    background:var(--bg-panel-2); color:var(--text-main);
+    border:2px solid var(--border-gold-dim); border-radius:10px; padding:10px 12px;
+    cursor:pointer;
+  }
+  .choice-btn:hover:not(:disabled){ border-color:var(--border-gold); }
+  .choice-btn.correct{ border-color:var(--accent-good); background:#20402a; }
+  .choice-btn.wrong{ border-color:var(--accent-bad); background:#402024; }
+  .choice-btn:disabled{ cursor:default; }
+
+  .feedback-panel{ border-color:var(--border-gold); }
+  .feedback-title.good{ color:var(--accent-good); }
+  .feedback-title.bad{ color:var(--accent-bad); }
+
+  /* ---------- Worddex ---------- */
+  .dex-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .dex-card{
+    background:var(--bg-panel-2); border:2px solid var(--border-gold-dim); border-radius:10px;
+    padding:8px 10px; cursor:pointer; min-height:64px;
+  }
+  .dex-card .w{ font-size:14px; letter-spacing:1px; }
+  .dex-card.uncaptured{ opacity:.55; }
+  .dex-card .w.masked{ font-family:monospace; letter-spacing:3px; }
+
+  /* ---------- Stats bars ---------- */
+  .statline{ display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; }
+  .barwrap{ height:12px; background:#000; border-radius:6px; overflow:hidden; border:1px solid #000; margin-bottom:12px;}
+  .barwrap .fill{ height:100%; }
+
+  #toast{
+    position:fixed; left:50%; top:14px; transform:translateX(-50%);
+    background:#1a1428; border:2px solid var(--border-gold); color:var(--text-main);
+    padding:8px 16px; border-radius:20px; font-size:13px; z-index:50;
+    opacity:0; pointer-events:none; transition: opacity .25s, top .25s;
+  }
+  #toast.show{ opacity:1; top:24px; }
+
+  footer.credits{ text-align:center; font-size:11px; color:var(--text-dim); padding:10px; opacity:.6; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="topbar" class="hidden">
+    <div class="hero-chip">
+      <span class="avatar-badge" id="tb-avatar">🦊</span>
+      <span id="tb-name">Hero</span>
+      <span class="stat">Lv<span id="tb-level">1</span></span>
+    </div>
+    <div class="stat">❤ <span id="hpbar-wrap"><span id="hpbar-fill"></span></span></div>
+    <div class="stat">✦ <span id="xpbar-wrap"><span id="xpbar-fill"></span></span></div>
+    <div class="stat">💰<span id="tb-gold">0</span></div>
+    <div id="nav">
+      <button data-screen="map">Map</button>
+      <button data-screen="dex">Worddex</button>
+      <button data-screen="stats">Stats</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- TITLE -->
+  <div class="screen" id="screen-title">
+    <div class="title-emoji">📖✨</div>
+    <h1>LEXIQUEST</h1>
+    <div class="subtitle">A Word-Learning Adventure</div>
+    <div class="row" style="justify-content:center">
+      <button class="btn wide" id="btn-continue" style="display:none">Continue Journey</button>
+      <button class="btn wide" id="btn-newgame">Begin New Journey</button>
+    </div>
+    <p class="muted" style="max-width:360px; margin-top:16px;">Meet word spirits, learn their meanings, and add them to your Worddex. Your progress saves automatically in this browser.</p>
+  </div>
+
+  <!-- CREATE HERO -->
+  <div class="screen hidden" id="screen-create">
+    <div class="panel">
+      <h2>Who are you?</h2>
+      <input type="text" id="input-name" maxlength="16" placeholder="Enter your name...">
+      <h3>Choose your companion</h3>
+      <div class="avatar-grid" id="avatar-grid"></div>
+      <button class="btn wide" id="btn-confirm-create">Set Off!</button>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="screen hidden" id="screen-map">
+    <h2>World Map</h2>
+    <div id="zone-list"></div>
+  </div>
+
+  <!-- ENCOUNTER -->
+  <div class="screen hidden" id="screen-encounter">
+    <div class="panel">
+      <div class="spirit-stage">
+        <span class="pos-badge" id="enc-pos-badge">noun</span>
+        <div class="blob" id="enc-blob"><div class="eyes"><div class="eye"></div><div class="eye"></div></div></div>
+        <div class="spirit-hp" id="enc-hp"></div>
+      </div>
+      <div class="word-display" id="enc-word">WORD</div>
+      <div id="enc-prompt" class="muted center" style="margin-bottom:10px;"></div>
+      <div id="enc-challenge"></div>
+    </div>
+  </div>
+
+  <!-- FEEDBACK -->
+  <div class="screen hidden" id="screen-feedback">
+    <div class="panel feedback-panel">
+      <h2 id="fb-title" class="feedback-title">Result</h2>
+      <p id="fb-body"></p>
+      <div class="panel" style="background:var(--bg-panel-2); margin-bottom:12px;">
+        <div class="pos-badge" id="fb-pos"></div>
+        <div style="font-size:20px; letter-spacing:2px; margin:4px 0;" id="fb-word"></div>
+        <p id="fb-def" class="muted" style="margin:0;"></p>
+      </div>
+      <button class="btn wide" id="btn-fb-continue">Continue</button>
+    </div>
+  </div>
+
+  <!-- ENCOUNTER END -->
+  <div class="screen hidden" id="screen-end">
+    <div class="panel center">
+      <h2 id="end-title">Victory!</h2>
+      <p id="end-body" class="muted"></p>
+      <button class="btn wide" id="btn-end-continue">Back to Map</button>
+    </div>
+  </div>
+
+  <!-- WORDDEX -->
+  <div class="screen hidden" id="screen-dex">
+    <h2>Worddex</h2>
+    <p class="muted" id="dex-progress"></p>
+    <div class="dex-grid" id="dex-grid"></div>
+  </div>
+
+  <!-- DEX DETAIL -->
+  <div class="screen hidden" id="screen-dex-detail">
+    <div class="panel">
+      <div class="pos-badge" id="dd-pos"></div>
+      <div style="font-size:26px; letter-spacing:2px; margin:6px 0;" id="dd-word"></div>
+      <p id="dd-def"></p>
+      <p class="muted" id="dd-meta"></p>
+      <div class="row">
+        <button class="btn secondary" id="btn-dd-back">Back</button>
+        <button class="btn" id="btn-dd-review">Review This Word</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="screen hidden" id="screen-stats">
+    <h2>Hero Stats</h2>
+    <div class="panel">
+      <div class="statline"><span id="st-name"></span><span id="st-level"></span></div>
+      <div class="barwrap"><div class="fill" id="st-xpfill" style="background:linear-gradient(90deg,#5aa9e6,#8ad0f0);"></div></div>
+      <div class="statline"><span>Gold</span><span id="st-gold"></span></div>
+      <div class="statline"><span>Words Captured</span><span id="st-captured"></span></div>
+      <div class="statline"><span>Words Encountered</span><span id="st-seen"></span></div>
+      <div class="statline"><span>Correct Answers</span><span id="st-correct"></span></div>
+      <div class="statline"><span>Incorrect Answers</span><span id="st-wrong"></span></div>
+      <div class="statline"><span>Accuracy</span><span id="st-accuracy"></span></div>
+    </div>
+    <div class="panel">
+      <h3>Settings</h3>
+      <button class="btn danger wide" id="btn-reset">Reset Game</button>
+    </div>
+  </div>
+
+  <footer class="credits">LEXIQUEST — progress is saved locally in this browser only.</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ======================= WORD BANK ======================= */
+var WORD_BANK = [
+{w:"ABANDON",p:"v",d:"To leave behind or give up completely."},
+{w:"ABUNDANT",p:"adj",d:"Existing in large quantities; plentiful."},
+{w:"ACCLAIM",p:"n",d:"Enthusiastic public praise."},
+{w:"ADVERSARY",p:"n",d:"An opponent or enemy."},
+{w:"AMBIGUOUS",p:"adj",d:"Open to more than one interpretation; unclear."},
+{w:"AMPLIFY",p:"v",d:"To increase the volume, size, or effect of something."},
+{w:"ANCIENT",p:"adj",d:"Belonging to the very distant past."},
+{w:"ANXIOUS",p:"adj",d:"Feeling worried or nervous about an uncertain outcome."},
+{w:"ARTICULATE",p:"adj",d:"Able to express thoughts clearly and effectively."},
+{w:"ASTONISH",p:"v",d:"To surprise or impress someone greatly."},
+{w:"AUTHENTIC",p:"adj",d:"Genuine and true to its origin."},
+{w:"BENEVOLENT",p:"adj",d:"Kind and generous."},
+{w:"BLEAK",p:"adj",d:"Cold, gray, and unwelcoming; without hope."},
+{w:"BOISTEROUS",p:"adj",d:"Noisy, energetic, and cheerful."},
+{w:"BRITTLE",p:"adj",d:"Hard but easily broken."},
+{w:"CANDID",p:"adj",d:"Truthful and straightforward; frank."},
+{w:"CAPTIVATE",p:"v",d:"To attract and hold the interest of someone."},
+{w:"CHRONIC",p:"adj",d:"Persisting for a long time or constantly recurring."},
+{w:"COMPASSION",p:"n",d:"Sympathetic concern for the suffering of others."},
+{w:"CONCEAL",p:"v",d:"To hide something from view or knowledge."},
+{w:"CONDEMN",p:"v",d:"To express strong disapproval of something."},
+{w:"CONTAGIOUS",p:"adj",d:"Spreading easily from one person to another."},
+{w:"CURIOUS",p:"adj",d:"Eager to learn or know something."},
+{w:"DECEIVE",p:"v",d:"To make someone believe something that is not true."},
+{w:"DELICATE",p:"adj",d:"Fine, fragile, or requiring careful handling."},
+{w:"DESOLATE",p:"adj",d:"Empty of people and feeling bleak."},
+{w:"DILIGENT",p:"adj",d:"Showing careful and persistent effort in work."},
+{w:"DISORIENT",p:"v",d:"To make someone lose their sense of direction."},
+{w:"ECLIPSE",p:"n",d:"The blocking of light from one celestial body by another."},
+{w:"ELOQUENT",p:"adj",d:"Fluent and persuasive in speaking or writing."},
+{w:"EMBARK",p:"v",d:"To begin a journey or new venture."},
+{w:"ENDURE",p:"v",d:"To suffer something difficult without giving up."},
+{w:"ENIGMA",p:"n",d:"A mysterious or puzzling person or thing."},
+{w:"EXHILARATE",p:"v",d:"To make someone feel very happy and excited."},
+{w:"FAMISHED",p:"adj",d:"Extremely hungry."},
+{w:"FICKLE",p:"adj",d:"Changing frequently, especially in loyalty or affection."},
+{w:"FLOURISH",p:"v",d:"To grow or develop successfully; to thrive."},
+{w:"FRUGAL",p:"adj",d:"Careful with money; not wasteful."},
+{w:"GENUINE",p:"adj",d:"Truly what it is said to be; real."},
+{w:"GLIMMER",p:"n",d:"A faint or unsteady light; a small sign of something."},
+{w:"GRATEFUL",p:"adj",d:"Feeling thankful."},
+{w:"HAZARDOUS",p:"adj",d:"Risky or dangerous."},
+{w:"HUMBLE",p:"adj",d:"Having a modest view of one's own importance."},
+{w:"IMMENSE",p:"adj",d:"Extremely large in size or degree."},
+{w:"INEVITABLE",p:"adj",d:"Certain to happen; unavoidable."},
+{w:"INTREPID",p:"adj",d:"Fearless and adventurous."},
+{w:"JUBILANT",p:"adj",d:"Feeling or expressing great happiness."},
+{w:"KINDLE",p:"v",d:"To start a fire; to arouse an emotion."},
+{w:"LETHARGIC",p:"adj",d:"Sluggish and lacking energy."},
+{w:"LINGER",p:"v",d:"To stay somewhere longer than necessary."},
+{w:"LUMINOUS",p:"adj",d:"Giving off light; bright."},
+{w:"MERIDIAN",p:"n",d:"The highest point reached by something; a peak."},
+{w:"MISCHIEF",p:"n",d:"Playful troublemaking that causes minor harm or annoyance."},
+{w:"NOSTALGIA",p:"n",d:"A sentimental longing for the past."},
+{w:"OBSOLETE",p:"adj",d:"No longer in use; outdated."},
+{w:"OMINOUS",p:"adj",d:"Giving the impression that something bad is about to happen."},
+{w:"PERSEVERE",p:"v",d:"To continue trying despite difficulty."},
+{w:"PLAUSIBLE",p:"adj",d:"Seeming reasonable or probable."},
+{w:"QUAINT",p:"adj",d:"Attractively unusual or old-fashioned."},
+{w:"RADIANT",p:"adj",d:"Sending out light; glowing brightly."},
+{w:"RECKLESS",p:"adj",d:"Acting without thinking of the consequences."},
+{w:"RESILIENT",p:"adj",d:"Able to recover quickly from difficulties."},
+{w:"SERENE",p:"adj",d:"Calm and peaceful."},
+{w:"SKEPTIC",p:"n",d:"A person who questions accepted beliefs."},
+{w:"SOLITUDE",p:"n",d:"The state of being alone."},
+{w:"TENACIOUS",p:"adj",d:"Holding firmly to something; persistent."},
+{w:"TREMENDOUS",p:"adj",d:"Very great in amount or degree."},
+{w:"UBIQUITOUS",p:"adj",d:"Present or found everywhere."},
+{w:"VIGILANT",p:"adj",d:"Keeping careful watch for possible danger."},
+{w:"VIVID",p:"adj",d:"Producing powerful feelings or clear images in the mind."},
+{w:"WHIMSICAL",p:"adj",d:"Playfully quaint or fanciful."},
+{w:"YEARN",p:"v",d:"To have an intense feeling of longing for something."},
+{w:"ZEALOUS",p:"adj",d:"Showing great energy and enthusiasm for a cause."}
+];
+var POS_LABEL = {n:"noun", v:"verb", adj:"adjective", adv:"adverb"};
+
+var AVATARS = [
+  {emoji:"🦊", name:"Fox"},
+  {emoji:"🦉", name:"Owl"},
+  {emoji:"🐉", name:"Dragon"},
+  {emoji:"🐢", name:"Turtle"},
+  {emoji:"🐱", name:"Cat"},
+  {emoji:"🐺", name:"Wolf"}
+];
+
+var ZONES = [
+  {id:"meadow", name:"Meadow of Murmurs", icon:"🌾", desc:"Gentle word spirits drift among the tall grass. A good place to begin.", minLevel:1}
+];
+
+var SAVE_KEY = "lexiquest_save_v1";
+
+/* ======================= STATE ======================= */
+var state = null;
+
+function freshState(){
+  return {
+    version:1,
+    hero:{ name:"", avatar:"🦊", level:1, xp:0, xpToNext:20, gold:0, hp:3, maxHp:3 },
+    progress:{
+      seenWords:{},          // word -> {pos,def,captured,timesSeen,capturedAt}
+      recentQueue:[],        // last N words shown, avoid immediate repeats
+      totalCorrect:0,
+      totalWrong:0,
+      totalEncounters:0
+    },
+    encounter:null,          // active encounter, or null
+    createdAt: Date.now(),
+    lastSaved: Date.now()
+  };
+}
+
+function save(){
+  state.lastSaved = Date.now();
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){ console.warn("save failed", e); }
+}
+function load(){
+  try{
+    var raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return null;
+    var parsed = JSON.parse(raw);
+    if(!parsed || !parsed.hero) return null;
+    return parsed;
+  }catch(e){ return null; }
+}
+
+/* ======================= UTIL ======================= */
+function $(id){ return document.getElementById(id); }
+function shuffle(arr){
+  var a = arr.slice();
+  for(var i=a.length-1;i>0;i--){
+    var j = Math.floor(Math.random()*(i+1));
+    var t=a[i]; a[i]=a[j]; a[j]=t;
+  }
+  return a;
+}
+function scrambleWord(w){
+  if(w.length<=1) return w;
+  var letters;
+  var tries=0;
+  do{
+    letters = shuffle(w.split(""));
+    tries++;
+  } while(letters.join("")===w && tries<20);
+  return letters.join("");
+}
+function pickRandom(arr, n, excludeFn){
+  var pool = excludeFn ? arr.filter(excludeFn) : arr.slice();
+  return shuffle(pool).slice(0, n);
+}
+var toastTimer=null;
+function toast(msg){
+  var t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 1800);
+}
+
+/* ======================= SCREEN MGMT ======================= */
+function showScreen(id){
+  var screens = document.querySelectorAll(".screen");
+  screens.forEach(function(s){ s.classList.add("hidden"); });
+  $(id).classList.remove("hidden");
+  document.querySelectorAll("#nav button").forEach(function(b){
+    b.classList.toggle("active", id === "screen-"+b.dataset.screen);
+  });
+}
+
+/* ======================= TOP BAR ======================= */
+function renderTopbar(){
+  if(!state){ $("topbar").classList.add("hidden"); return; }
+  $("topbar").classList.remove("hidden");
+  $("tb-avatar").textContent = state.hero.avatar;
+  $("tb-name").textContent = state.hero.name;
+  $("tb-level").textContent = state.hero.level;
+  $("tb-gold").textContent = state.hero.gold;
+  var hpPct = Math.max(0, state.hero.hp/state.hero.maxHp*100);
+  $("hpbar-fill").style.width = hpPct+"%";
+  var xpPct = Math.max(0, Math.min(100, state.hero.xp/state.hero.xpToNext*100));
+  $("xpbar-fill").style.width = xpPct+"%";
+}
+
+/* ======================= TITLE / CREATE ======================= */
+function initTitleScreen(){
+  var existing = load();
+  $("btn-continue").style.display = existing ? "block" : "none";
+  showScreen("screen-title");
+}
+$("btn-continue").addEventListener("click", function(){
+  state = load() || freshState();
+  renderTopbar();
+  goMap();
+});
+$("btn-newgame").addEventListener("click", function(){
+  var existing = load();
+  if(existing){
+    if(!confirm("Starting a new journey will erase your current saved progress. Continue?")) return;
+  }
+  buildAvatarGrid();
+  showScreen("screen-create");
+});
+
+var chosenAvatar = AVATARS[0].emoji;
+function buildAvatarGrid(){
+  var grid = $("avatar-grid");
+  grid.innerHTML = "";
+  AVATARS.forEach(function(a){
+    var d = document.createElement("div");
+    d.className = "avatar-opt" + (a.emoji===chosenAvatar ? " selected":"");
+    d.innerHTML = a.emoji + '<div class="name">'+a.name+'</div>';
+    d.addEventListener("click", function(){
+      chosenAvatar = a.emoji;
+      grid.querySelectorAll(".avatar-opt").forEach(function(x){ x.classList.remove("selected"); });
+      d.classList.add("selected");
+    });
+    grid.appendChild(d);
+  });
+}
+$("btn-confirm-create").addEventListener("click", function(){
+  var name = $("input-name").value.trim();
+  if(!name){ toast("Please enter a name!"); return; }
+  state = freshState();
+  state.hero.name = name.slice(0,16);
+  state.hero.avatar = chosenAvatar;
+  save();
+  renderTopbar();
+  toast("Welcome, "+state.hero.name+"!");
+  goMap();
+});
+
+/* ======================= MAP ======================= */
+function goMap(){
+  renderMap();
+  showScreen("screen-map");
+}
+function renderMap(){
+  var list = $("zone-list");
+  list.innerHTML = "";
+  ZONES.forEach(function(z){
+    var locked = state.hero.level < z.minLevel;
+    var panel = document.createElement("div");
+    panel.className = "panel zone-card" + (locked ? " locked-zone":"");
+    panel.innerHTML =
+      '<div class="zone-icon">'+z.icon+'</div>'+
+      '<div class="info"><h3 style="color:var(--border-gold); font-size:16px; margin-bottom:2px;">'+z.name+'</h3>'+
+      '<p class="muted" style="margin:0;">'+z.desc+'</p></div>';
+    if(!locked){
+      var btn = document.createElement("button");
+      btn.className = "btn secondary";
+      btn.textContent = "Explore";
+      btn.addEventListener("click", function(){ startEncounter(z); });
+      panel.appendChild(btn);
+    } else {
+      var lock = document.createElement("div");
+      lock.className = "muted";
+      lock.textContent = "Lv "+z.minLevel;
+      panel.appendChild(lock);
+    }
+    list.appendChild(panel);
+  });
+}
+
+/* ======================= ENCOUNTER ======================= */
+var forcedWord = null; // set when reviewing a specific word from the Worddex
+
+function chooseEncounterWord(){
+  if(forcedWord){
+    var fw = forcedWord;
+    forcedWord = null;
+    var entry = WORD_BANK.filter(function(e){ return e.w===fw; })[0];
+    if(entry) return entry;
+  }
+  var recent = state.progress.recentQueue;
+  var pool = WORD_BANK.filter(function(e){ return recent.indexOf(e.w) === -1; });
+  if(pool.length===0) pool = WORD_BANK;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+function startEncounter(zone){
+  var entry = chooseEncounterWord();
+  var q = state.progress.recentQueue;
+  q.push(entry.w);
+  while(q.length>8) q.shift();
+
+  var seen = state.progress.seenWords[entry.w];
+  if(!seen){
+    seen = { pos:entry.p, def:entry.d, captured:false, timesSeen:0, capturedAt:null };
+    state.progress.seenWords[entry.w] = seen;
+  }
+  seen.timesSeen++;
+  state.progress.totalEncounters++;
+
+  state.encounter = {
+    word: entry.w, pos: entry.p, def: entry.d,
+    hp: 2, maxHp: 2, round: 0
+  };
+  save();
+  renderEncounter();
+  showScreen("screen-encounter");
+}
+
+function renderEncounter(){
+  var enc = state.encounter;
+  var blob = $("enc-blob");
+  blob.className = "blob pos-"+enc.pos;
+  $("enc-pos-badge").textContent = POS_LABEL[enc.pos] || enc.pos;
+
+  var hpWrap = $("enc-hp");
+  hpWrap.innerHTML = "";
+  for(var i=0;i<enc.maxHp;i++){
+    var pip = document.createElement("div");
+    pip.className = "pip" + (i < enc.hp ? "" : " empty");
+    hpWrap.appendChild(pip);
+  }
+
+  renderTopbar();
+  renderChallenge();
+}
+
+function renderChallenge(){
+  var enc = state.encounter;
+  var mode = Math.random() < 0.5 ? "define" : "jumble";
+  enc.mode = mode;
+
+  var challengeDiv = $("enc-challenge");
+  challengeDiv.innerHTML = "";
+
+  if(mode === "define"){
+    $("enc-word").textContent = enc.word;
+    $("enc-word").classList.remove("scrambled");
+    $("enc-prompt").textContent = "What does this word mean?";
+
+    var distractors = pickRandom(WORD_BANK, 3, function(e){ return e.w !== enc.word; }).map(function(e){ return e.d; });
+    var options = shuffle([enc.def].concat(distractors));
+
+    var list = document.createElement("div");
+    list.className = "choice-list";
+    options.forEach(function(opt){
+      var b = document.createElement("button");
+      b.className = "choice-btn";
+      b.textContent = opt;
+      b.addEventListener("click", function(){ handleAnswer(opt === enc.def, list, b); });
+      list.appendChild(b);
+    });
+    challengeDiv.appendChild(list);
+
+    var hintRow = document.createElement("div");
+    hintRow.className = "row";
+    hintRow.style.marginTop = "10px";
+    var hintBtn = document.createElement("button");
+    hintBtn.className = "btn secondary";
+    hintBtn.textContent = "Remove a wrong option (5💰)";
+    hintBtn.addEventListener("click", function(){
+      if(state.hero.gold < 5){ toast("Not enough gold!"); return; }
+      var wrongBtns = Array.prototype.filter.call(list.children, function(b){ return b.textContent !== enc.def && !b.disabled; });
+      if(wrongBtns.length <= 1){ toast("No more to remove!"); return; }
+      state.hero.gold -= 5;
+      wrongBtns[0].disabled = true;
+      wrongBtns[0].style.opacity = 0.3;
+      renderTopbar(); save();
+      hintBtn.disabled = true;
+    });
+    hintRow.appendChild(hintBtn);
+    challengeDiv.appendChild(hintRow);
+
+  } else {
+    var scrambled = scrambleWord(enc.word);
+    $("enc-word").textContent = scrambled;
+    $("enc-word").classList.add("scrambled");
+    $("enc-prompt").textContent = "Unscramble the word. Hint: " + enc.def;
+
+    var form = document.createElement("form");
+    form.innerHTML = '<input type="text" id="jumble-input" autocomplete="off" placeholder="Type your answer...">';
+    var submitBtn = document.createElement("button");
+    submitBtn.type = "submit";
+    submitBtn.className = "btn wide";
+    submitBtn.textContent = "Submit";
+    form.appendChild(submitBtn);
+    form.addEventListener("submit", function(ev){
+      ev.preventDefault();
+      var val = $("jumble-input").value.trim().toUpperCase();
+      if(!val) return;
+      handleAnswer(val === enc.word, null);
+    });
+    challengeDiv.appendChild(form);
+
+    var revealRow = document.createElement("div");
+    revealRow.className = "row";
+    revealRow.style.marginTop = "10px";
+    var revealBtn = document.createElement("button");
+    revealBtn.type = "button";
+    revealBtn.className = "btn secondary";
+    revealBtn.textContent = "Reveal a letter (5💰)";
+    var revealedCount = 0;
+    revealBtn.addEventListener("click", function(){
+      if(state.hero.gold < 5){ toast("Not enough gold!"); return; }
+      revealedCount++;
+      if(revealedCount >= enc.word.length){ toast("No more letters to reveal!"); return; }
+      state.hero.gold -= 5;
+      var rest = enc.word.length - revealedCount;
+      $("jumble-input").placeholder = enc.word.slice(0,revealedCount) + "_".repeat(rest);
+      renderTopbar(); save();
+    });
+    revealRow.appendChild(revealBtn);
+    challengeDiv.appendChild(revealRow);
+    setTimeout(function(){ var el = $("jumble-input"); if(el) el.focus(); }, 30);
+  }
+}
+
+function handleAnswer(correct, choiceListEl, clickedBtn){
+  var enc = state.encounter;
+  if(choiceListEl){
+    Array.prototype.forEach.call(choiceListEl.children, function(b){
+      b.disabled = true;
+      if(b.textContent === enc.def) b.classList.add("correct");
+    });
+    if(!correct && clickedBtn) clickedBtn.classList.add("wrong");
+  }
+
+  if(correct){
+    state.progress.totalCorrect++;
+    enc.hp--;
+    $("enc-blob").classList.remove("hit");
+  } else {
+    state.progress.totalWrong++;
+    state.hero.hp--;
+    $("enc-blob").classList.add("hit");
+  }
+  save();
+
+  $("fb-title").textContent = correct ? "Correct!" : "Not quite...";
+  $("fb-title").className = "feedback-title " + (correct ? "good":"bad");
+  $("fb-body").textContent = correct
+    ? "You understood the word spirit! It reels back."
+    : "The word spirit shimmers away from your guess and strikes back.";
+  $("fb-pos").textContent = POS_LABEL[enc.pos] || enc.pos;
+  $("fb-word").textContent = enc.word;
+  $("fb-def").textContent = enc.def;
+
+  showScreen("screen-feedback");
+}
+
+$("btn-fb-continue").addEventListener("click", function(){
+  var enc = state.encounter;
+  if(enc.hp <= 0){
+    captureWord();
+    return;
+  }
+  if(state.hero.hp <= 0){
+    retreat();
+    return;
+  }
+  renderEncounter();
+  showScreen("screen-encounter");
+});
+
+function captureWord(){
+  var enc = state.encounter;
+  var seen = state.progress.seenWords[enc.word];
+  var firstCapture = !seen.captured;
+  seen.captured = true;
+  seen.capturedAt = Date.now();
+
+  var goldEarned = 0, xpEarned = 0;
+  if(firstCapture){
+    goldEarned = 5 + Math.floor(Math.random()*11); // 5-15
+    xpEarned = 10;
+    state.hero.gold += goldEarned;
+    state.hero.xp += xpEarned;
+  } else {
+    goldEarned = 2;
+    xpEarned = 3;
+    state.hero.gold += goldEarned;
+    state.hero.xp += xpEarned;
+  }
+
+  var leveledUp = false;
+  while(state.hero.xp >= state.hero.xpToNext){
+    state.hero.xp -= state.hero.xpToNext;
+    state.hero.level++;
+    state.hero.maxHp++;
+    state.hero.xpToNext = 20 + (state.hero.level-1)*10;
+    leveledUp = true;
+  }
+  state.hero.hp = state.hero.maxHp;
+
+  $("end-title").textContent = firstCapture ? "New Word Captured!" : "Word Reviewed!";
+  $("end-body").textContent = enc.word + " joins your Worddex. +"+xpEarned+" XP, +"+goldEarned+" gold." +
+    (leveledUp ? " Level up! You are now level "+state.hero.level+"." : "");
+
+  state.encounter = null;
+  save();
+  renderTopbar();
+  showScreen("screen-end");
+}
+
+function retreat(){
+  var enc = state.encounter;
+  state.hero.gold = Math.max(0, state.hero.gold - 3);
+  state.hero.hp = Math.max(1, Math.floor(state.hero.maxHp/2));
+  $("end-title").textContent = "You Retreat...";
+  $("end-body").textContent = "The "+enc.word+" spirit was too much this time. You lost a little gold, but you'll remember its meaning: “"+enc.def+"”";
+  state.encounter = null;
+  save();
+  renderTopbar();
+  showScreen("screen-end");
+}
+
+$("btn-end-continue").addEventListener("click", goMap);
+
+/* ======================= WORDDEX ======================= */
+function renderDex(){
+  var seenWords = state.progress.seenWords;
+  var words = Object.keys(seenWords).sort();
+  var captured = words.filter(function(w){ return seenWords[w].captured; });
+  $("dex-progress").textContent = captured.length + " / " + WORD_BANK.length + " words captured ("+words.length+" encountered)";
+
+  var grid = $("dex-grid");
+  grid.innerHTML = "";
+  if(words.length === 0){
+    grid.innerHTML = '<p class="muted">Explore the map to meet your first word spirit!</p>';
+    return;
+  }
+  words.forEach(function(w){
+    var info = seenWords[w];
+    var card = document.createElement("div");
+    card.className = "dex-card" + (info.captured ? "" : " uncaptured");
+    card.innerHTML = '<div class="pos-badge">'+(POS_LABEL[info.pos]||info.pos)+'</div>' +
+      '<div class="w'+(info.captured?'':' masked')+'">' + (info.captured ? w : w[0]+"•".repeat(Math.max(1,w.length-1))) + '</div>';
+    card.addEventListener("click", function(){ openDexDetail(w); });
+    grid.appendChild(card);
+  });
+}
+var currentDexWord = null;
+function openDexDetail(w){
+  currentDexWord = w;
+  var info = state.progress.seenWords[w];
+  $("dd-pos").textContent = POS_LABEL[info.pos] || info.pos;
+  $("dd-word").textContent = info.captured ? w : "? ? ? ? ?";
+  $("dd-def").textContent = info.captured ? info.def : "Not yet mastered. Review this word to learn its meaning and capture it!";
+  $("dd-meta").textContent = info.captured
+    ? "Captured " + new Date(info.capturedAt).toLocaleDateString()
+    : "Encountered " + info.timesSeen + " time" + (info.timesSeen===1?"":"s") + ".";
+  $("btn-dd-review").textContent = info.captured ? "Review Again" : "Review This Word";
+  showScreen("screen-dex-detail");
+}
+$("btn-dd-back").addEventListener("click", function(){ renderDex(); showScreen("screen-dex"); });
+$("btn-dd-review").addEventListener("click", function(){
+  forcedWord = currentDexWord;
+  startEncounter(ZONES[0]);
+});
+
+/* ======================= STATS ======================= */
+function renderStats(){
+  $("st-name").textContent = state.hero.avatar + " " + state.hero.name;
+  $("st-level").textContent = "Level " + state.hero.level;
+  var xpPct = Math.max(0, Math.min(100, state.hero.xp/state.hero.xpToNext*100));
+  $("st-xpfill").style.width = xpPct + "%";
+  $("st-gold").textContent = state.hero.gold;
+  var words = Object.keys(state.progress.seenWords);
+  var captured = words.filter(function(w){ return state.progress.seenWords[w].captured; });
+  $("st-captured").textContent = captured.length + " / " + WORD_BANK.length;
+  $("st-seen").textContent = words.length;
+  $("st-correct").textContent = state.progress.totalCorrect;
+  $("st-wrong").textContent = state.progress.totalWrong;
+  var total = state.progress.totalCorrect + state.progress.totalWrong;
+  $("st-accuracy").textContent = total ? Math.round(state.progress.totalCorrect/total*100)+"%" : "—";
+}
+$("btn-reset").addEventListener("click", function(){
+  if(!confirm("This will permanently erase your saved progress. Are you sure?")) return;
+  localStorage.removeItem(SAVE_KEY);
+  state = null;
+  initTitleScreen();
+});
+
+/* ======================= NAV ======================= */
+document.querySelectorAll("#nav button").forEach(function(b){
+  b.addEventListener("click", function(){
+    var target = b.dataset.screen;
+    if(target === "map"){ goMap(); }
+    else if(target === "dex"){ renderDex(); showScreen("screen-dex"); }
+    else if(target === "stats"){ renderStats(); showScreen("screen-stats"); }
+  });
+});
+
+/* ======================= BOOT ======================= */
+function boot(){
+  var loaded = load();
+  if(loaded){
+    state = loaded;
+    // if we crashed mid-encounter last session, just discard it
+    state.encounter = null;
+    renderTopbar();
+    goMap();
+  } else {
+    initTitleScreen();
+  }
+}
+boot();
+
+})();
+</script>
+</body>
+</html>
