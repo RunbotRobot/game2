@@ -651,7 +651,9 @@ function getSpiritImg(pos){
    the repo) and lazy-loaded on demand: only fetched when a word is actually
    shown, never bundled or preloaded in bulk. Falls back silently to the
    generic part-of-speech spirit art whenever no custom art exists yet. */
-var WORD_ART_BASE = "https://cdn.jsdelivr.net/gh/RunbotRobot/game2@main/word-art/";
+// NOTE: this repo's content currently lives on the claude/word-learning-rpg-sghck9
+// branch, not main - update this ref (and word-art/README.md) if that changes.
+var WORD_ART_BASE = "https://cdn.jsdelivr.net/gh/RunbotRobot/game2@claude/word-learning-rpg-sghck9/word-art/";
 var wordArtCache = {}; // word -> true (confirmed exists) | false (confirmed missing)
 function loadWordArtInto(imgEl, word, pos){
   imgEl.src = getSpiritImg(pos);

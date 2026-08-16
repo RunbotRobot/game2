@@ -26,21 +26,28 @@ bundled or preloaded in bulk.
 Served directly from this GitHub repo via the jsDelivr CDN:
 
 ```
-https://cdn.jsdelivr.net/gh/RunbotRobot/game2@main/word-art/<WORD>.png
+https://cdn.jsdelivr.net/gh/RunbotRobot/game2@claude/word-learning-rpg-sghck9/word-art/<WORD>.png
 ```
 
-No separate image host or account needed — pushing a file here to the
-`main` branch is enough to make it live at that URL. jsDelivr caches
-successful responses for a while (so an *update* to an existing file
-can take up to ~24h to show everywhere; a *new* file at a previously-404
-path shows up immediately). To force-refresh a stale file, hit:
-`https://purge.jsdelivr.net/gh/RunbotRobot/game2@main/word-art/<WORD>.png`
+No separate image host or account needed — pushing a file here to that
+branch is enough to make it live at that URL. `index.html` reads this
+same base URL from the `WORD_ART_BASE` constant — **keep them in sync**.
+If/when this branch merges into `main`, switch both to
+`@main` for a stable long-term URL (branch refs work but are more
+fragile if the branch is ever renamed or deleted).
+
+jsDelivr caches successful responses for a while (so an *update* to an
+existing file can take up to ~24h to show everywhere; a *new* file at a
+previously-404 path shows up within moments). To force-refresh a stale
+file, hit:
+`https://purge.jsdelivr.net/gh/RunbotRobot/game2@claude/word-learning-rpg-sghck9/word-art/<WORD>.png`
 
 ## Adding a batch
 
 1. Generate/obtain the art (e.g. via Gemini).
 2. Crop/matte it to match the existing sprite style, save as
    `word-art/<WORD>.png`.
-3. Commit and push to `main`. That's it — no other code changes needed,
+3. Commit and push to this branch (see `WORD_ART_BASE` above for which
+   one is current). That's it — no other code changes needed,
    `loadWordArtInto()` in `index.html` picks it up automatically the
    next time that word is encountered.
