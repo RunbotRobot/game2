@@ -166,6 +166,17 @@
   .locked-zone{ opacity:.7; }
   .lock-info{ font-size:11px; text-align:right; line-height:1.4; flex-shrink:0; }
 
+  #enc-panel{ position:relative; overflow:hidden; }
+  .zone-backdrop-img{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    z-index:0; display:none;
+  }
+  .zone-backdrop-overlay{
+    position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:linear-gradient(rgba(20,14,33,0.75),rgba(20,14,33,0.9));
+  }
+  .enc-content{ position:relative; z-index:2; }
+
   /* ---------- Word spirit ---------- */
   .spirit-stage{
     display:flex; flex-direction:column; align-items:center; padding:10px 0 4px;
@@ -299,13 +310,17 @@
   <!-- ENCOUNTER -->
   <div class="screen hidden" id="screen-encounter">
     <div class="panel" id="enc-panel">
-      <div class="spirit-stage">
-        <span class="pos-badge" id="enc-pos-badge">noun</span>
-        <div class="blob" id="enc-blob"></div>
+      <img id="enc-panel-bg" class="zone-backdrop-img" alt="">
+      <div class="zone-backdrop-overlay"></div>
+      <div class="enc-content">
+        <div class="spirit-stage">
+          <span class="pos-badge" id="enc-pos-badge">noun</span>
+          <div class="blob" id="enc-blob"></div>
+        </div>
+        <div class="word-display" id="enc-word">WORD</div>
+        <div id="enc-prompt" class="muted center" style="margin-bottom:10px;"></div>
+        <div id="enc-challenge"></div>
       </div>
-      <div class="word-display" id="enc-word">WORD</div>
-      <div id="enc-prompt" class="muted center" style="margin-bottom:10px;"></div>
-      <div id="enc-challenge"></div>
     </div>
   </div>
 
@@ -684,7 +699,9 @@ function getAvatar(key){
 
 var ZONES = [
   {id:"meadow", name:"Meadow of Murmurs", icon:"🌾", desc:"Gentle word spirits drift among the tall grass. A good place to begin.", minLevel:1, img:IMG.meadow},
-  {id:"woods", name:"Whispering Woods", icon:"🌲", desc:"Denser, trickier word spirits lurk beneath the canopy.", minLevel:3}
+  // placeholder art (reuses the meadow image, tinted) until real Whispering Woods art exists;
+  // once it does, just add a proper img here and drop imgFilter
+  {id:"woods", name:"Whispering Woods", icon:"🌲", desc:"Denser, trickier word spirits lurk beneath the canopy.", minLevel:3, img:IMG.meadow, imgFilter:"hue-rotate(155deg) saturate(1.4) brightness(0.6) contrast(1.15)"}
 ];
 
 var SAVE_KEY = "lexiquest_save_v1";
@@ -928,8 +945,9 @@ function renderMap(){
     var locked = state.hero.level < z.minLevel;
     var panel = document.createElement("div");
     panel.className = "panel zone-card" + (locked ? " locked-zone":"");
+    var thumbStyle = z.imgFilter ? ' style="filter:'+z.imgFilter+'"' : '';
     panel.innerHTML =
-      (z.img ? '<img class="zone-thumb" src="'+z.img+'" alt="">' : '<div class="zone-icon">'+z.icon+'</div>')+
+      (z.img ? '<img class="zone-thumb" src="'+z.img+'" alt=""'+thumbStyle+'>' : '<div class="zone-icon">'+z.icon+'</div>')+
       '<div class="info"><h3 style="color:var(--border-gold); font-size:16px; margin-bottom:2px;">'+z.name+'</h3>'+
       '<p class="muted" style="margin:0;">'+z.desc+'</p></div>';
     if(!locked){
@@ -1032,11 +1050,13 @@ function renderEncounter(){
   $("enc-pos-badge").textContent = POS_LABEL[enc.pos] || enc.pos;
 
   var zone = ZONES.filter(function(z){ return z.id === enc.zoneId; })[0];
-  var encPanel = $("enc-panel");
+  var bgImg = $("enc-panel-bg");
   if(zone && zone.img){
-    encPanel.style.backgroundImage = "linear-gradient(rgba(20,14,33,0.75),rgba(20,14,33,0.9)), url('"+zone.img+"')";
-    encPanel.style.backgroundSize = "cover";
-    encPanel.style.backgroundPosition = "center";
+    bgImg.src = zone.img;
+    bgImg.style.filter = zone.imgFilter || "none";
+    bgImg.style.display = "block";
+  } else {
+    bgImg.style.display = "none";
   }
 
   renderTopbar();
