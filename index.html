@@ -179,10 +179,14 @@
   @keyframes bob{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-6px);} }
   .spirit-img{ width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 6px 4px rgba(0,0,0,0.45)); }
   .word-art{ animation:fadein .25s ease; }
-  .pos-n .spirit-img{ filter:drop-shadow(0 0 18px rgba(90,169,230,0.6)) drop-shadow(0 6px 4px rgba(0,0,0,0.45)); }
-  .pos-v .spirit-img{ filter:drop-shadow(0 0 18px rgba(224,97,107,0.6)) drop-shadow(0 6px 4px rgba(0,0,0,0.45)); }
-  .pos-adj .spirit-img{ filter:drop-shadow(0 0 18px rgba(111,191,115,0.6)) drop-shadow(0 6px 4px rgba(0,0,0,0.45)); }
-  .pos-adv .spirit-img{ filter:drop-shadow(0 0 18px rgba(168,131,230,0.6)) drop-shadow(0 6px 4px rgba(0,0,0,0.45)); }
+  /* generic fallback blobs (no bespoke word-art yet) keep a part-of-speech-colored
+     glow so their color still carries meaning; once real word-art loads, it gets a
+     neutral warm glow instead, since each image's own colors are the point now */
+  .pos-n .spirit-img:not(.word-art){ filter:drop-shadow(0 0 18px rgba(90,169,230,0.6)) drop-shadow(0 6px 4px rgba(0,0,0,0.45)); }
+  .pos-v .spirit-img:not(.word-art){ filter:drop-shadow(0 0 18px rgba(224,97,107,0.6)) drop-shadow(0 6px 4px rgba(0,0,0,0.45)); }
+  .pos-adj .spirit-img:not(.word-art){ filter:drop-shadow(0 0 18px rgba(111,191,115,0.6)) drop-shadow(0 6px 4px rgba(0,0,0,0.45)); }
+  .pos-adv .spirit-img:not(.word-art){ filter:drop-shadow(0 0 18px rgba(168,131,230,0.6)) drop-shadow(0 6px 4px rgba(0,0,0,0.45)); }
+  .spirit-img.word-art{ filter:drop-shadow(0 0 16px rgba(216,168,75,0.5)) drop-shadow(0 6px 4px rgba(0,0,0,0.45)); }
 
   .pos-badge{
     display:inline-block; font-size:11px; padding:2px 8px; border-radius:12px;
