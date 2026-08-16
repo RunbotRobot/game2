@@ -314,6 +314,10 @@
     <div class="panel feedback-panel">
       <h2 id="res-title" class="feedback-title">Result</h2>
       <p id="res-body" class="muted"></p>
+      <div class="panel" id="res-your-answer-wrap" style="background:#2a1418; border-color:var(--accent-bad); margin-bottom:10px; display:none;">
+        <div class="muted" style="font-size:11px; margin-bottom:2px;">Your answer:</div>
+        <p id="res-your-answer" style="margin:0;"></p>
+      </div>
       <div class="panel" style="background:var(--bg-panel-2); margin-bottom:12px;">
         <div class="pos-badge" id="res-pos"></div>
         <div style="font-size:20px; letter-spacing:2px; margin:4px 0;" id="res-word"></div>
@@ -948,18 +952,16 @@ function renderMap(){
 var forcedWord = null; // set when reviewing a specific word from the Worddex
 var lastZoneId = null; // zone of the most recent encounter, for "Next Word"
 
-function chooseEncounterWord(){
-  if(forcedWord){
-    var fw = forcedWord;
-    forcedWord = null;
-    var entry = WORD_BANK.filter(function(e){ return e.w===fw; })[0];
-    if(entry) return entry;
-  }
-  var recent = state.progress.recentQueue;
-  var pool = WORD_BANK.filter(function(e){ return recent.indexOf(e.w) === -1; });
-  if(pool.length===0) pool = WORD_BANK;
-  // words already answered correctly show up less often the more mastered they are,
-  // but never drop to zero chance so long-term retention still gets reviewed
+function currentAccuracy(){
+  var total = state.progress.totalCorrect + state.progress.totalWrong;
+  if(total < 5) return 0.6; // not enough data yet - use a neutral default
+  return state.progress.totalCorrect / total;
+}
+
+function weightedPick(pool){
+  // within a pool, words already answered correctly show up less often the
+  // more mastered they are, but never drop to zero chance so long-term
+  // retention still gets reviewed
   var weights = pool.map(function(e){
     var seen = state.progress.seenWords[e.w];
     var mastery = seen ? (seen.mastery||0) : 0;
@@ -972,6 +974,30 @@ function chooseEncounterWord(){
     if(r<=0) return pool[i];
   }
   return pool[pool.length-1];
+}
+
+function chooseEncounterWord(){
+  if(forcedWord){
+    var fw = forcedWord;
+    forcedWord = null;
+    var entry = WORD_BANK.filter(function(e){ return e.w===fw; })[0];
+    if(entry) return entry;
+  }
+  var recent = state.progress.recentQueue;
+  var available = WORD_BANK.filter(function(e){ return recent.indexOf(e.w) === -1; });
+  if(available.length===0) available = WORD_BANK;
+
+  var unseenPool = available.filter(function(e){ return !state.progress.seenWords[e.w]; });
+  var seenPool = available.filter(function(e){ return state.progress.seenWords[e.w]; });
+
+  // the higher your correct rate, the more often you meet a brand-new word
+  // instead of reviewing one you've already seen (clamped so it's never
+  // guaranteed either way)
+  var newWordChance = Math.max(0.15, Math.min(0.85, currentAccuracy()));
+  var drawFromUnseen = unseenPool.length > 0 && (seenPool.length === 0 || Math.random() < newWordChance);
+
+  if(drawFromUnseen) return unseenPool[Math.floor(Math.random()*unseenPool.length)];
+  return weightedPick(seenPool.length > 0 ? seenPool : unseenPool);
 }
 
 function startEncounter(zone){
@@ -1042,7 +1068,7 @@ function renderChallenge(){
       var b = document.createElement("button");
       b.className = "choice-btn";
       b.textContent = opt;
-      b.addEventListener("click", function(){ handleAnswer(opt === enc.def); });
+      b.addEventListener("click", function(){ handleAnswer(opt === enc.def, opt); });
       list.appendChild(b);
     });
     challengeDiv.appendChild(list);
@@ -1084,7 +1110,7 @@ function renderChallenge(){
       ev.preventDefault();
       var val = $("jumble-input").value.trim().toUpperCase();
       if(!val) return;
-      handleAnswer(val === enc.word);
+      handleAnswer(val === enc.word, val);
     });
     challengeDiv.appendChild(form);
 
@@ -1111,10 +1137,16 @@ function renderChallenge(){
   }
 }
 
-function showResult(titleText, isGood, bodyText, enc){
+function showResult(titleText, isGood, bodyText, enc, userAnswer){
   $("res-title").textContent = titleText;
   $("res-title").className = "feedback-title " + (isGood ? "good" : "bad");
   $("res-body").textContent = bodyText;
+  if(userAnswer){
+    $("res-your-answer").textContent = userAnswer;
+    $("res-your-answer-wrap").style.display = "block";
+  } else {
+    $("res-your-answer-wrap").style.display = "none";
+  }
   $("res-pos").textContent = POS_LABEL[enc.pos] || enc.pos;
   $("res-word").textContent = enc.word;
   $("res-def").textContent = enc.def;
@@ -1122,7 +1154,7 @@ function showResult(titleText, isGood, bodyText, enc){
   $("btn-res-next").focus();
 }
 
-function handleAnswer(correct){
+function handleAnswer(correct, userAnswer){
   var enc = state.encounter;
   var seenWord = state.progress.seenWords[enc.word];
   if(correct){
@@ -1137,8 +1169,8 @@ function handleAnswer(correct){
     state.hero.hp--;
     SFX.wrong();
     save();
-    if(state.hero.hp <= 0) retreat();
-    else missWord();
+    if(state.hero.hp <= 0) retreat(userAnswer);
+    else missWord(userAnswer);
   }
 }
 
@@ -1186,20 +1218,21 @@ function captureWord(){
   if(leveledUp) setTimeout(function(){ SFX.levelup(); }, 350);
 }
 
-function missWord(){
+function missWord(userAnswer){
   var enc = state.encounter;
   showResult(
     "Not Quite...",
     false,
     "The "+enc.word+" spirit slips away this time. Find it again anytime from your Worddex to try again.",
-    enc
+    enc,
+    userAnswer
   );
   state.encounter = null;
   save();
   renderTopbar();
 }
 
-function retreat(){
+function retreat(userAnswer){
   var enc = state.encounter;
   state.hero.gold = Math.max(0, state.hero.gold - 3);
   state.hero.hp = Math.max(1, Math.floor(state.hero.maxHp/2));
@@ -1207,7 +1240,8 @@ function retreat(){
     "You Retreat...",
     false,
     "That one stumped you and you're out of steam. You lose a little gold, but your HP recovers a bit.",
-    enc
+    enc,
+    userAnswer
   );
   state.encounter = null;
   save();
